@@ -26,6 +26,9 @@ public class RC4 {
         this.PLAINTEXT_FILE = PLAINTEXT_FILE;
     }
 
+    /**
+     * EncryptsOrDecrypts depending on the option
+     */
     public void convert() {
         byte[] key = readFile(KEY_FILE);
         switch (OPTION) {
@@ -44,7 +47,12 @@ public class RC4 {
         }
     }
 
-
+    /**
+     * Method to encrypt the plaintext from the ciphertext file
+     * @param bytesFromFile Array bytes from file
+     * @param keyFile Array bytes from key file
+     * @return Message of Cypher text + IV
+     */
     public byte[] encrypt (byte[] bytesFromFile, byte[] keyFile) {
         ByteBuffer buffer = ByteBuffer.wrap(bytesFromFile);
         buffer.order(ByteOrder.LITTLE_ENDIAN);
