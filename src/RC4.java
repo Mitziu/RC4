@@ -1,3 +1,5 @@
+import com.sun.tools.javac.util.Assert;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -9,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.SecureRandom;
+import java.util.Arrays;
 
 public class RC4 {
 
@@ -80,7 +83,7 @@ public class RC4 {
 
         byte[] IV = generateIV();
 
-        byte[] seed = mergeKeyIV(key, IV);
+        byte[] seed = XORKeyIV(key, IV);
 
         initialization(seed);
 
@@ -91,9 +94,7 @@ public class RC4 {
             cipher_Text[i] = (byte) (plainText[i] ^ keyStream[i]);
         }
 
-        writeOutCipher(cipher_Text, IV);
-
-        return cipher_Text;
+        return writeOutCipher(cipher_Text, IV);
     }
 
     /**
@@ -131,24 +132,28 @@ public class RC4 {
     }
 
     /**
-     * Concatenates the Key and IV ( KEY || IV)
+     * XORs KEY AND IV
      * @param Key Byte of key
      * @param IV Byte of IV
-     * @return byte array ( KEY || IV)
+     * @return byte array ( KEY XOR IV)
      */
-    private byte[] mergeKeyIV (byte[] Key , byte[] IV) {
-        byte[] merged = new byte[Key.length + IV.length];
-
-        int i = 0;
-        for (byte b: Key) {
-            merged[i++] = b;
+    private byte[] XORKeyIV(byte[] Key , byte[] IV) {
+        byte[] keyPadded = new byte[32];
+        for(int i = 0; i < keyPadded.length; i++) {
+            keyPadded[i] = (byte) 0;
         }
 
-        for (byte b: IV) {
-            merged[i++] = b;
+        for(int i = 0; i < Key.length; i++) {
+            keyPadded[keyPadded.length - Key.length + i] = Key[i];
         }
 
-        return merged;
+        byte[] XORed = new byte[32];
+
+        for(int i = 0; i < XORed.length; i++) {
+            XORed[i] = (byte) (IV[i] ^ (keyPadded[i]));
+        }
+
+       return XORed;
     }
 
     /**
@@ -156,7 +161,7 @@ public class RC4 {
      * @param cipher_Text Cipher Text to write out
      * @param IV IV to write in the cipher text
      */
-    private void writeOutCipher (byte[] cipher_Text, byte[] IV) {
+    private byte[] writeOutCipher (byte[] cipher_Text, byte[] IV) {
         System.out.println("Cipher Text");
         displayBytes(cipher_Text);
 
@@ -189,32 +194,10 @@ public class RC4 {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        return buffer.array();
     }
 
-    private void writeOutPlaintext (byte[] plaintext) {
-
-        ByteBuffer buffer = ByteBuffer.allocate(plaintext.length + 4);
-
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
-
-        buffer.putInt(plaintext.length);
-
-        for (Byte b: plaintext) {
-            buffer.put(b);
-        }
-
-        buffer.flip();
-
-        File plaintextFile = new File(PLAINTEXT_FILE);
-
-        try (FileChannel channel = new FileOutputStream(plaintextFile, false).getChannel()) {
-            channel.write(buffer);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
 
     /**
      * Decrypts plaintext from the bytes in the cipher text
@@ -248,16 +231,16 @@ public class RC4 {
             key[i] = buffer.get();
         }
 
-        System.out.println("Key: ");
-        displayBytes(key);
-
         System.out.println("Cipher Text");
         displayBytes(cipherText);
+
+        System.out.println("Key: ");
+        displayBytes(key);
 
         System.out.println("IV");
         displayBytes(IV);
 
-        byte[] seed = mergeKeyIV(key, IV);
+        byte[] seed = XORKeyIV(key, IV);
 
         initialization(seed);
 
@@ -268,16 +251,39 @@ public class RC4 {
             plaintext[i] = (byte) (cipherText[i] ^ keyStream[i]);
         }
 
-        System.out.println("Plaintext: ");
-        displayBytes(plaintext);
-
         /**
          * Write method to printout plaintext
          */
 
-        writeOutPlaintext(plaintext);
+        return writeOutPlaintext(plaintext);
+    }
 
-        return plaintext;
+
+    private byte[] writeOutPlaintext (byte[] plaintext) {
+        System.out.println("Plaintext: ");
+        displayBytes(plaintext);
+        ByteBuffer buffer = ByteBuffer.allocate(plaintext.length + 4);
+
+        buffer.order(ByteOrder.LITTLE_ENDIAN);
+
+        buffer.putInt(plaintext.length);
+
+        for (Byte b: plaintext) {
+            buffer.put(b);
+        }
+        buffer.flip();
+
+        File plaintextFile = new File(PLAINTEXT_FILE);
+
+        try (FileChannel channel = new FileOutputStream(plaintextFile, false).getChannel()) {
+            channel.write(buffer);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return buffer.array();
     }
 
     /**
@@ -355,5 +361,15 @@ public class RC4 {
 
         RC4 rc4 = new RC4(args[0], args[1], args[2], args[3]);
         rc4.convert();
+
+
+        /**
+         * Uncomment to check decrypt(encrypt(pt,key),key) = pt
+         */
+//        byte[] pt = rc4.readFile("msg");
+//        byte[] key = rc4.readFile("key");
+//
+//        byte[] ptDecrypt = rc4.decrypt(rc4.encrypt(pt, key), key);
+//        Assert.check(Arrays.equals(pt, ptDecrypt));
     }
 }
