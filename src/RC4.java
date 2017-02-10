@@ -1,5 +1,3 @@
-import com.sun.tools.javac.util.Assert;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -11,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.SecureRandom;
-import java.util.Arrays;
 
 public class RC4 {
 
@@ -362,14 +359,5 @@ public class RC4 {
         RC4 rc4 = new RC4(args[0], args[1], args[2], args[3]);
         rc4.convert();
 
-
-        /**
-         * Uncomment to check decrypt(encrypt(pt,key),key) = pt
-         */
-//        byte[] pt = rc4.readFile("msg");
-//        byte[] key = rc4.readFile("key");
-//
-//        byte[] ptDecrypt = rc4.decrypt(rc4.encrypt(pt, key), key);
-//        Assert.check(Arrays.equals(pt, ptDecrypt));
     }
 }
